@@ -19,6 +19,26 @@ export const getProducts = async (req, rest) => {
   }
 };
 
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { category, q } = req.query;
+
+    const allowedCategories = ["coffee", "tea", "pastries", "specials"];
+    if (!allowedCategories.includes(category)) {
+      return res.status(400).json({ message: "Invalid category" });
+    }
+
+    const products = await Product.find({
+      category,
+      productName: { $regex: q || "", $options: "i" },
+    });
+
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const updateProduct = async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
