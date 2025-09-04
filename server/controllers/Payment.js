@@ -5,22 +5,28 @@ const PAYMONGO_API = "https://api.paymongo.com/v1/payment_intents";
 
 export const createPayment = async (req, res) => {
   try {
-    const { orderId, amount, currency = "PHP" } = req.body;
+    const { orderId, currency = "PHP" } = req.body;
 
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Create Payment Intent
+    // Create Payment Intent for GCash only
     const response = await axios.post(
       PAYMONGO_API,
       {
         data: {
           attributes: {
-            amount: amount * 100, // in centavos
+            amount: order.totalPrice * 100, // convert to centavos
             currency,
-            payment_method_allowed: ["card"],
-            payment_method_options: { card: { request_three_d_secure: "any" } },
-            description: `Payment for Order ${orderId}`,
+            payment_method_allowed: ["gcash"], // GCash only
+            payment_method_options: { gcash: {} }, // optional GCash options
+            description: `Coffee Shop Order #${orderId}`,
+            metadata: {
+              orderId: orderId,
+              items: order.items
+                .map((item) => `${item.productName} x${item.quantity}`)
+                .join(", "),
+            },
           },
         },
       },
@@ -34,6 +40,7 @@ export const createPayment = async (req, res) => {
       }
     );
 
+    // Return the checkout URL or QR data to frontend
     res.status(201).json(response.data);
   } catch (error) {
     console.error(error.response?.data || error.message);
@@ -41,7 +48,7 @@ export const createPayment = async (req, res) => {
   }
 };
 
-// Confirm Payment (optional callback after success)
+// Confirm Payment (after successful GCash payment)
 export const confirmPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
