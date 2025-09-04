@@ -1,3 +1,4 @@
 import Product from "./Product.js";
+import Customer from "./Customer.js";
 
-export { Product };
+export { Product, Customer };
